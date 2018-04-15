@@ -1,13 +1,18 @@
+#!/usr/bin/python
 import pandas as pd
-
-df1 = pd.read_csv("~/Downloads/USDJPY.csv", names=["time", "open", "high", "low", "close", "volume"], header=None)
-
-open_data = df1['open'][1:].convert_objects(convert_numeric=True)
-close_data = df1['close'][1:].convert_objects(convert_numeric=True)
-low_data = df1['low'][1:].convert_objects(convert_numeric=True)
-high_data = df1['high'][1:].convert_objects(convert_numeric=True)
-volume_data = df1['volume'][1:].convert_objects(convert_numeric=True)
-print(type(open_data))
+from sklearn import linear_model, datasets
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.cross_validation import train_test_split
+from sklearn import  metrics
+df1 = pd.read_csv("USDJPY.csv", names=["time", "open", "high", "low", "close", "volume"], header=None)
+h = .02  # step size in the mesh
+open_data = pd.to_numeric(df1['open'][1:])
+close_data = pd.to_numeric(df1['close'][1:])
+low_data = pd.to_numeric(df1['low'][1:])
+high_data = pd.to_numeric(df1['high'][1:])
+volume_data = pd.to_numeric(df1['volume'][1:])
+print(type(open_data[1]))
 print(open_data[open_data.size])
 close_relative = ((close_data - open_data) / open_data) * 10000
 high_relative = ((high_data - open_data) / open_data) * 10000
@@ -37,19 +42,20 @@ input_data = pd.DataFrame(dtype=float,columns=['bar1_relative_close',
                                                         'bar4_relative_high',
                                                         'bar4_volume'])
 print(type(open_data.values[0]))
+print(close_relative)
+
 
 #filling predict data
-for i in range(5, open_data.size):
-    if (open_data.size > (i + 3)):
+for i in range(5, open_data.size-3):
         if (open_data.values[i] > close_data.values[i+3]):
-            predict_data=predict_data.append(pd.Series(data=[0],index=[i]))
+            predict_data=predict_data.append(pd.Series(data=[0]))
         else:
-            predict_data=predict_data.append(pd.Series(data=[1],index=[i]))
+            predict_data=predict_data.append(pd.Series(data=[1]))
 
 print(predict_data.shape)
 
 #filling input data
-for i in range(1, open_data.size-4):
+for i in range(1, open_data.size-7):
     ar = pd.Series(data=[close_relative.values[i],
                          low_relative.values[i],
                          high_relative.values[i],
@@ -91,5 +97,21 @@ for i in range(1, open_data.size-4):
 
     input_data=input_data.append(pd.Series(data=ar),ignore_index=True)
 
+#input_data.to_csv(path_or_buf="mm.csv")
 
-print(input_data)
+logreg = linear_model.LogisticRegression(C=1e5)
+
+print(input_data.values.shape)
+X = input_data.values
+Y = predict_data.values
+
+# get test data and train data
+x_train, x_test, y_train, y_test = train_test_split(X,Y,random_state=0)
+print(Y.shape)
+print(x_test)
+# we create an instance of Neighbours Classifier and fit the data.
+logreg.fit(x_train, y_train)
+
+y_predict = logreg.predict(x_test)
+#print out the accuracy of the model
+print(metrics.accuracy_score(y_test,y_predict))
